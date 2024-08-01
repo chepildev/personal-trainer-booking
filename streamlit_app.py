@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+import uuid
 
 # Get the Flowise API key from Streamlit secrets
 HF_FLOWISE = st.secrets["HF_FLOWISE"]
@@ -30,15 +31,24 @@ def query(payload):
 # Show title and description.
 st.title("💬 Personal trainer instagram chat")
 st.write(
-    "Im personal trainer appointment setter that want to setup a video call with potential client."
-    "I will follow the sales script and send you the link with calendly to set up video call"
-    "You are the potential customer, Ask your question to test the script flow and give me feedback what to change"
+    "This bot personal trainer assistant that wants to set up a video call with potential clients. "
+    "Bot will follow the sales script and send you the link with Calendly to set up a video call. "
+    "You are chatting as the potential customer!."
+    "Ask your question to test the script flow and give me feedback on what to change."
 )
 
 # Create a session state variable to store the chat messages. This ensures that the
 # messages persist across reruns.
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())  # Generate a unique session ID
+
+ # Button to clear chat history
+if st.button("Clear Chat"):
+    st.session_state.messages = []
+    st.session_state.session_id = str(uuid.uuid4())
 
 # Display the existing chat messages via `st.chat_message`.
 for message in st.session_state.messages:
@@ -54,8 +64,16 @@ if prompt := st.chat_input("Hey how are you?"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate a response using the Flowise API
-    output = query({"question": prompt})
+    # # Generate a response using the Flowise API
+    # output = query({"question": prompt})
+
+    # Generate a response using the Flowise API with session ID
+    output = query({
+        "question": prompt,
+        "overrideConfig": {
+            "sessionId": st.session_state.session_id,
+        }
+    })
 
     # Stream the response to the chat
     if output:
@@ -65,7 +83,3 @@ if prompt := st.chat_input("Hey how are you?"):
         st.session_state.messages.append({"role": "assistant", "content": response_message})
     else:
         st.error("Failed to get a response from the chatbot.")
-
-    # Button to clear chat history
-    if st.button("Clear Chat"):
-        st.session_state.messages = []
